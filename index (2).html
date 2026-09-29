@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operação Linfonodo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* slate-900 */
+            color: #f8fafc; /* slate-50 */
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        .card {
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            user-select: none;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .card.selected {
+            border-color: #38bdf8; /* sky-400 */
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
+            transform: scale(1.05);
+            z-index: 10;
+        }
+
+        .slot {
+            transition: all 0.2s;
+        }
+
+        .slot.highlight {
+            border-color: #38bdf8;
+            background-color: rgba(56, 189, 248, 0.1);
+        }
+
+        /* Modal Background Blur */
+        .modal-overlay {
+            backdrop-filter: blur(5px);
+            background-color: rgba(15, 23, 42, 0.8);
+        }
+
+        /* Efeito de pulso para o botão */
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 5px rgba(52, 211, 153, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(52, 211, 153, 0.8); }
+        }
+        .btn-verify {
+            animation: pulse-glow 2s infinite;
+        }
+
+        .shake {
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+        
+        .success-bg {
+            background: radial-gradient(circle at center, #064e3b 0%, #0f172a 100%);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <div id="missionModal" class="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
+        <div class="bg-slate-800 border border-slate-600 rounded-xl max-w-lg w-full p-6 shadow-2xl relative">
+            <div class="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-cyan-600 rounded-full p-3 border-4 border-slate-900">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-center mt-6 mb-4 text-cyan-400">ERRO NO PROTOCOLO!</h2>
+            <p class="text-slate-300 text-sm md:text-base leading-relaxed mb-4 text-justify">
+                Uma célula dendrítica capturou um antígeno nos tecidos periféricos e migrou com sucesso para o linfonodo. 
+                Entretanto, o sistema reportou um <strong>erro grave no protocolo de ativação</strong> e a resposta adaptativa foi interrompida!
+            </p>
+            <p class="text-slate-300 text-sm md:text-base leading-relaxed mb-6 text-justify">
+                <strong>Sua missão:</strong> Você recebeu 16 cartões contendo moléculas e estruturas. Cuidado: alguns são distratores e não pertencem a este protocolo! 
+                Restaure as vias de comunicação organizando os cartões corretos em duas sequências: <br><br>
+                <span class="text-sky-400 font-semibold">A - Ativação do Linfócito T</span><br>
+                <span class="text-indigo-400 font-semibold">B - Ativação do Linfócito B</span>
+            </p>
+            <div class="flex justify-center">
+                <button onclick="closeMissionModal()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition duration-300">
+                    Iniciar Restauração
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <header class="bg-slate-800 border-b border-slate-700 py-4 px-6 sticky top-0 z-40 flex justify-between items-center shadow-md">
+        <div class="flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <h1 class="text-xl font-bold tracking-wider">OPERAÇÃO <span class="text-cyan-400">LINFONODO</span></h1>
+        </div>
+        <button onclick="document.getElementById('missionModal').classList.remove('hidden')" class="text-slate-400 hover:text-white transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        </button>
+    </header>
+
+    <main class="flex-grow p-4 md:p-6 lg:p-8 flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto w-full">
+        
+        <!-- Banco de Cartões -->
+        <section class="lg:w-1/3 bg-slate-800/50 rounded-xl p-4 border border-slate-700 shadow-inner flex flex-col">
+            <h2 class="text-sm uppercase tracking-widest text-slate-400 font-semibold mb-4 text-center">Cartões Disponíveis</h2>
+            <p class="text-xs text-slate-500 mb-4 text-center">Toque em um cartão para selecioná-lo e, em seguida, toque em um espaço vazio para movê-lo.</p>
+            
+            <div id="card-bank" class="flex flex-wrap gap-3 justify-center bg-slate-900 p-4 rounded-lg min-h-[150px] border border-slate-700 cursor-pointer" onclick="handleSlotClick('bank')">
+                <!-- Cartões serão injetados via JS -->
+            </div>
+            
+            <div class="mt-auto pt-6 pb-2 text-center">
+                <button onclick="verifyProtocol()" class="btn-verify w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition duration-300 flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                    VERIFICAR PROTOCOLO
+                </button>
+            </div>
+        </section>
+
+        <section class="lg:w-2/3 flex flex-col gap-6">
+            
+            <!-- Sequência A -->
+            <div class="bg-slate-800/80 border border-sky-900 rounded-xl p-5 shadow-lg relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-1 h-full bg-sky-500"></div>
+                <h3 class="text-sky-400 font-bold mb-1 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
+                    </svg>
+                    Sequência A: Linfócito T
+                </h3>
+                <p class="text-xs text-slate-400 mb-4">Reconhecimento → Coestimulação → Ativação/Expansão</p>
+                
+                <div class="flex flex-wrap gap-3 items-center">
+                    <!-- Slot 1 -->
+                    <div class="flex flex-col items-center">
+                        <div class="slot border-2 border-dashed border-sky-700/50 bg-slate-900/50 rounded-lg h-20 w-32 flex items-center justify-center cursor-pointer relative" id="slot-t1" onclick="handleSlotClick('slot-t1')">
+                            <span class="text-xs text-slate-600 text-center px-1 pointer-events-none">Apresentação (DC)</span>
+                        </div>
+                    </div>
+                    <span class="text-sky-700 font-bold">→</span>
+                    <!-- Slot 2 -->
+                    <div class="flex flex-col items-center">
+                        <div class="slot border-2 border-dashed border-sky-700/50 bg-slate-900/50 rounded-lg h-20 w-32 flex items-center justify-center cursor-pointer relative" id="slot-t2" onclick="handleSlotClick('slot-t2')">
+                            <span class="text-xs text-slate-600 text-center px-1 pointer-events-none">Receptor (T)</span>
+                        </div>
+                    </div>
+                    <span class="text-sky-700 font-bold">→</span>
+                    <!-- Slot 3 -->
+                    <div class="flex flex-col items-center">
+                        <div class="slot border-2 border-dashed border-sky-700/50 bg-slate-900/50 rounded-lg h-20 w-32 flex items-center justify-center cursor-pointer relative" id="slot-t3" onclick="handleSlotClick('slot-t3')">
+                            <span class="text-xs text-slate-600 text-center px-1 pointer-events-none">Ligante Coestimulador (DC)</span>
+                        </div>
+                    </div>
+                    <span class="text-sky-700 font-bold">→</span>
+                    <!-- Slot 4 -->
+                    <div class="flex flex-col items-center">
+                        <div class="slot border-2 border-dashed border-sky-700/50 bg-slate-900/50 rounded-lg h-20 w-32 flex items-center justify-center cursor-pointer relative" id="slot-t4" onclick="handleSlotClick('slot-t4')">
+                            <span class="text-xs text-slate-600 text-center px-1 pointer-events-none">Receptor Coestimulador (T)</span>
+                        </div>
+                    </div>
+                    <span class="text-sky-700 font-bold">→</span>
+                    <!-- Slot 5 -->
+                    <div class="flex flex-col items-center">
+                        <div class="slot border-2 border-dashed border-sky-700/50 bg-slate-900/50 rounded-lg h-20 w-32 flex items-center justify-center cursor-pointer relative" id="slot-t5" onclick="handleSlotClick('slot-t5')">
+                            <span class="text-xs text-slate-600 text-center px-1 pointer-events-none">Citocina Expansão Clonal</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-800/80 border border-indigo-900 rounded-xl p-5 shadow-lg relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+                <h3 class="text-indigo-400 font-bold mb-1 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd" />
+                    </svg>
+                    Sequência B: Linfócito B
+                </h3>
+                <p class="text-xs text-slate-400 mb-4">Interação T-B → Reação Germinativa → Maturação e Troca → Efetoras</p>
+                
+                <div class="flex flex-wrap gap-3 items-center">
+                    <!-- Slot 6 -->
+                    <div class="flex flex-col items-center">
+                        <div class="slot border-2 border-dashed border-indigo-700/50 bg-slate-900/50 rounded-lg h-20 w-32 flex items-center justify-center cursor-pointer relative" id="slot-b1" onclick="handleSlotClick('slot-b1')">
+                            <span class="text-xs text-slate-600 text-center px-1 pointer-events-none">Receptor (B)</span>
+                        </div>
+                    </div>
+                    <span class="text-indigo-700 font-bold">→</span>
+                    <!-- Slot 7 -->
+                    <div class="flex flex-col items-center">
+                        <div class="slot border-2 border-dashed border-indigo-700/50 bg-slate-900/50 rounded-lg h-20 w-32 flex items-center justify-center cursor-pointer relative" id="slot-b2" onclick="handleSlotClick('slot-b2')">
+                            <span class="text-xs text-slate-600 text-center px-1 pointer-events-none">Ligante (T Auxiliar)</span>
+                        </div>
+                    </div>
+                    <span class="text-indigo-700 font-bold">→</span>
+                    <!-- Slot 8 -->
+                    <div class="flex flex-col items-center">
+                        <div class="slot border-2 border-dashed border-indigo-700/50 bg-slate-900/50 rounded-lg h-20 w-32 flex items-center justify-center cursor-pointer relative" id="slot-b3" onclick="handleSlotClick('slot-b3')">
+                            <span class="text-xs text-slate-600 text-center px-1 pointer-events-none">Microambiente Proliferação</span>
+                        </div>
+                    </div>
+                    <span class="text-indigo-700 font-bold">→</span>
+                    <!-- Slot 9 -->
+                    <div class="flex flex-col items-center">
+                        <div class="slot border-2 border-dashed border-indigo-700/50 bg-slate-900/50 rounded-lg h-20 w-32 flex items-center justify-center cursor-pointer relative" id="slot-b4" onclick="handleSlotClick('slot-b4')">
+                            <span class="text-xs text-slate-600 text-center px-1 pointer-events-none">Enzima (Troca/Maturação)</span>
+                        </div>
+                    </div>
+                    <span class="text-indigo-700 font-bold">→</span>
+                    
+                    <div class="flex flex-col gap-2">
+                        <!-- Slot 10 -->
+                        <div class="flex flex-col items-center">
+                            <div class="slot border-2 border-dashed border-indigo-700/50 bg-slate-900/50 rounded-lg h-20 w-32 flex items-center justify-center cursor-pointer relative" id="slot-b5" onclick="handleSlotClick('slot-b5')">
+                                <span class="text-xs text-slate-600 text-center px-1 pointer-events-none">Diferenciação 1</span>
+                            </div>
+                        </div>
+                        <!-- Slot 11 -->
+                        <div class="flex flex-col items-center">
+                            <div class="slot border-2 border-dashed border-indigo-700/50 bg-slate-900/50 rounded-lg h-20 w-32 flex items-center justify-center cursor-pointer relative" id="slot-b6" onclick="handleSlotClick('slot-b6')">
+                                <span class="text-xs text-slate-600 text-center px-1 pointer-events-none">Diferenciação 2</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </section>
+    </main>
+
+    <!-- Modal de Erro -->
+    <div id="errorModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
+        <div class="bg-slate-800 border-2 border-red-500 rounded-xl max-w-sm w-full p-6 shadow-2xl relative text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </div>
+            <h3 class="text-lg leading-6 font-medium text-white mb-2" id="errorTitle">Falha na Ativação</h3>
+            <div class="mt-2">
+                <p class="text-sm text-slate-300" id="errorMessage">Alguns receptores e ligantes estão em posições incompatíveis. Revise as conexões biológicas e tente novamente.</p>
+            </div>
+            <div class="mt-5">
+                <button type="button" onclick="closeFeedbackModals()" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:text-sm transition">
+                    Revisar Protocolo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Sucesso -->
+    <div id="successModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
+        <div class="success-bg border border-emerald-500 rounded-xl max-w-md w-full p-6 shadow-2xl relative text-center">
+            <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-emerald-100 mb-4 shadow-[0_0_20px_rgba(16,185,129,0.6)]">
+                <svg class="h-8 w-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            <h3 class="text-2xl font-bold text-emerald-400 mb-2">Protocolo Restaurado!</h3>
+            <div class="mt-2 space-y-3">
+                <p class="text-sm text-slate-200 text-justify">
+                    Excelente trabalho! O linfócito T foi ativado com sucesso pelo reconhecimento duplo (MHC+TCR e B7+CD28) e secretou IL-2 para expansão.
+                </p>
+                <p class="text-sm text-slate-200 text-justify">
+                    O linfócito B interagiu com o T Auxiliar (CD40+CD40L), formou o centro germinativo e, mediado pela enzima AID, gerou plasmócitos produtores de anticorpos de alta afinidade e células B de memória.
+                </p>
+                <p class="text-md font-bold text-white mt-4">A resposta imune adaptativa foi salva!</p>
+            </div>
+            <div class="mt-6">
+                <button type="button" onclick="resetGame()" class="w-full inline-flex justify-center rounded-md shadow-sm px-4 py-3 bg-emerald-600 text-base font-bold text-white hover:bg-emerald-500 focus:outline-none transition">
+                    Jogar Novamente
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dados dos cartões e suas posições corretas
+        const cardData = [
+            // Sequência A
+            { id: 'c-mhc', text: 'Peptídeo-MHC', match: 'slot-t1', color: 'border-sky-500', bg: 'bg-slate-700' },
+            { id: 'c-tcr', text: 'TCR', match: 'slot-t2', color: 'border-sky-400', bg: 'bg-slate-700' },
+            { id: 'c-b7', text: 'B7', match: 'slot-t3', color: 'border-sky-500', bg: 'bg-slate-700' },
+            { id: 'c-cd28', text: 'CD28', match: 'slot-t4', color: 'border-sky-400', bg: 'bg-slate-700' },
+            { id: 'c-il2', text: 'IL-2', match: 'slot-t5', color: 'border-teal-400', bg: 'bg-slate-700' },
+            
+            // Sequência B
+            { id: 'c-cd40', text: 'CD40', match: 'slot-b1', color: 'border-indigo-400', bg: 'bg-slate-700' },
+            { id: 'c-cd40l', text: 'CD40L', match: 'slot-b2', color: 'border-sky-400', bg: 'bg-slate-700' },
+            { id: 'c-cg', text: 'Centro germinativo', match: 'slot-b3', color: 'border-purple-500', bg: 'bg-slate-700' },
+            { id: 'c-aid', text: 'AID', match: 'slot-b4', color: 'border-fuchsia-400', bg: 'bg-slate-700' },
+            // Plasmócito e Memória podem ocupar qualquer um dos dois últimos slots da B
+            { id: 'c-plasmo', text: 'Plasmócito', match: ['slot-b5', 'slot-b6'], color: 'border-indigo-500', bg: 'bg-slate-700' },
+            { id: 'c-mem', text: 'Célula B de memória', match: ['slot-b5', 'slot-b6'], color: 'border-indigo-300', bg: 'bg-slate-700' },
+            
+            // Distratores
+            { id: 'c-cd8', text: 'CD8', match: 'none', color: 'border-amber-400', bg: 'bg-slate-700' },
+            { id: 'c-prr', text: 'PRR', match: 'none', color: 'border-rose-400', bg: 'bg-slate-700' },
+            { id: 'c-ifng', text: 'IFN-γ', match: 'none', color: 'border-lime-400', bg: 'bg-slate-700' },
+            { id: 'c-ctla4', text: 'CTLA-4', match: 'none', color: 'border-violet-400', bg: 'bg-slate-700' },
+            { id: 'c-rag', text: 'RAG', match: 'none', color: 'border-orange-400', bg: 'bg-slate-700' }
+        ];
+
+        let selectedCard = null;
+
+        function initGame() {
+            const bank = document.getElementById('card-bank');
+            bank.innerHTML = '';
+            
+            // Embaralhar cartões
+            const shuffled = [...cardData].sort(() => Math.random() - 0.5);
+
+            shuffled.forEach(data => {
+                const card = document.createElement('div');
+                card.id = data.id;
+                card.className = `card w-32 h-16 flex items-center justify-center rounded-lg border-2 ${data.color} ${data.bg} cursor-pointer text-sm font-semibold text-center leading-tight p-1 z-10`;
+                card.innerText = data.text;
+                card.dataset.match = Array.isArray(data.match) ? JSON.stringify(data.match) : data.match;
+                
+                // Evento de clique para selecionar
+                card.onclick = (e) => {
+                    e.stopPropagation(); // Evitar propagação para o slot/banco
+                    handleCardClick(card);
+                };
+
+                bank.appendChild(card);
+            });
+
+            // Limpar slots
+            document.querySelectorAll('.slot').forEach(slot => {
+                // Remover cartões existentes
+                const cardsInSlot = slot.querySelectorAll('.card');
+                cardsInSlot.forEach(c => c.remove());
+                slot.classList.remove('bg-slate-800', 'border-solid');
+            });
+        }
+
+        function handleCardClick(cardElement) {
+            // Se já tem um selecionado, deseleciona
+            if (selectedCard) {
+                selectedCard.classList.remove('selected');
+                
+                // Se clicou no mesmo, apenas deseleciona e para
+                if (selectedCard.id === cardElement.id) {
+                    selectedCard = null;
+                    removeHighlights();
+                    return;
+                }
+            }
+
+            // Selecionar o novo
+            selectedCard = cardElement;
+            selectedCard.classList.add('selected');
+            highlightEmptySlots();
+        }
+
+        function handleSlotClick(slotId) {
+            if (!selectedCard) return; // Nada selecionado para mover
+
+            const target = slotId === 'bank' ? document.getElementById('card-bank') : document.getElementById(slotId);
+            
+            // Se for um slot do jogo (não o banco)
+            if (slotId !== 'bank') {
+                // Verificar se o slot já tem um cartão
+                const existingCard = target.querySelector('.card');
+                if (existingCard) {
+                    // Trocar os cartões de lugar
+                    const sourceParent = selectedCard.parentNode;
+                    sourceParent.appendChild(existingCard);
+                    target.appendChild(selectedCard);
+                } else {
+                    // Apenas mover
+                    target.appendChild(selectedCard);
+                    target.classList.add('bg-slate-800', 'border-solid');
+                }
+            } else {
+                // Movendo de volta para o banco
+                target.appendChild(selectedCard);
+                // Limpar estilos do slot de onde saiu
+                document.querySelectorAll('.slot').forEach(s => {
+                    if (s.children.length === 1) { // Só tem o span de dica
+                         s.classList.remove('bg-slate-800', 'border-solid');
+                    }
+                });
+            }
+
+            // Limpar seleção
+            selectedCard.classList.remove('selected');
+            selectedCard = null;
+            removeHighlights();
+        }
+
+        // Efeitos visuais para guiar o jogador
+        function highlightEmptySlots() {
+            document.querySelectorAll('.slot').forEach(slot => {
+                const hasCard = slot.querySelector('.card');
+                if (!hasCard) {
+                    slot.classList.add('highlight');
+                }
+            });
+            document.getElementById('card-bank').classList.add('border-cyan-500');
+        }
+
+        function removeHighlights() {
+            document.querySelectorAll('.slot').forEach(slot => {
+                slot.classList.remove('highlight');
+            });
+            document.getElementById('card-bank').classList.remove('border-cyan-500');
+        }
+
+        function verifyProtocol() {
+            let totalCorrect = 0;
+            let missing = 0;
+            const slots = document.querySelectorAll('.slot');
+            
+            // Verifica se todos os slots estão preenchidos
+            slots.forEach(slot => {
+                if (!slot.querySelector('.card')) {
+                    missing++;
+                }
+            });
+
+            if (missing > 0) {
+                showError("Protocolo Incompleto", `Faltam posicionar ${missing} molécula(s)/estrutura(s) nas vias de ativação.`);
+                return;
+            }
+
+            // Validar posições
+            let allCorrect = true;
+            
+            slots.forEach(slot => {
+                const card = slot.querySelector('.card');
+                const slotId = slot.id;
+                
+                if (card) {
+                    const matchData = card.dataset.match;
+                    let isMatch = false;
+                    
+                    try {
+                        // Tratar array (Plasmócito/Memória)
+                        const matches = JSON.parse(matchData);
+                        if (matches.includes(slotId)) isMatch = true;
+                    } catch (e) {
+                        // String normal
+                        if (matchData === slotId) isMatch = true;
+                    }
+
+                    if (!isMatch) {
+                        allCorrect = false;
+                        slot.classList.add('shake', 'border-red-500');
+                        setTimeout(() => {
+                            slot.classList.remove('shake', 'border-red-500');
+                        }, 500);
+                    }
+                }
+            });
+
+            if (allCorrect) {
+                document.getElementById('successModal').classList.remove('hidden');
+            } else {
+                showError("Erro na Cascata", "Existem cartões em posições incorretas. Verifique a ordem de reconhecimento e os receptores específicos de cada célula.");
+            }
+        }
+
+        // Funções dos Modais
+        function closeMissionModal() {
+            document.getElementById('missionModal').classList.add('hidden');
+        }
+
+        function showError(title, message) {
+            document.getElementById('errorTitle').innerText = title;
+            document.getElementById('errorMessage').innerText = message;
+            document.getElementById('errorModal').classList.remove('hidden');
+        }
+
+        function closeFeedbackModals() {
+            document.getElementById('errorModal').classList.add('hidden');
+        }
+
+        function resetGame() {
+            document.getElementById('successModal').classList.add('hidden');
+            initGame();
+        }
+
+        // Iniciar ao carregar
+        window.onload = () => {
+            initGame();
+        };
+
+    </script>
+</body>
+</html>
